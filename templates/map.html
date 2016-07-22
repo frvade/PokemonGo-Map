@@ -53,6 +53,7 @@
 		<!-- Header -->
 		<header id="header">
 			<a href="#nav">Filter</a>
+			<a href="#" id="change-location" class="fa fa-compass" aria-hidden="true"></a>
 			<h1><a href="#">Pokémon Go Map</a></h1>
 		</header>
 
@@ -120,15 +121,10 @@
 	<!-- <script type="text/javascript" src="static/js/vendor/svg-overlay.js"></script> -->
 
 
-  <script type="text/javascript">
-    var center_lat = {{lat}};
-    var center_lng = {{lng}};
-  </script>
-
-    <script type="text/javascript">
-      var center_lat = {{lat}};
-      var center_lng = {{lng}};
-    </script>
+	<script type="text/javascript">
+		var center_lat = {{lat}};
+		var center_lng = {{lng}};
+	</script>
 
 	<script type="text/javascript" src="static/map.js"></script>
 	<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ gmaps_key }}&callback=initMap"></script>
