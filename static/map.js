@@ -51,6 +51,7 @@ $selectNotify.on("change", function (e) {
 });
 
 var map;
+var centerMarker;
 
 var light2Style=[{"elementType":"geometry","stylers":[{"hue":"#ff4400"},{"saturation":-68},{"lightness":-4},{"gamma":0.72}]},{"featureType":"road","elementType":"labels.icon"},{"featureType":"landscape.man_made","elementType":"geometry","stylers":[{"hue":"#0077ff"},{"gamma":3.1}]},{"featureType":"water","stylers":[{"hue":"#00ccff"},{"gamma":0.44},{"saturation":-33}]},{"featureType":"poi.park","stylers":[{"hue":"#44ff00"},{"saturation":-23}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"hue":"#007fff"},{"gamma":0.77},{"saturation":65},{"lightness":99}]},{"featureType":"water","elementType":"labels.text.stroke","stylers":[{"gamma":0.11},{"weight":5.6},{"saturation":99},{"hue":"#0091ff"},{"lightness":-86}]},{"featureType":"transit.line","elementType":"geometry","stylers":[{"lightness":-48},{"hue":"#ff5e00"},{"gamma":1.2},{"saturation":-23}]},{"featureType":"transit","elementType":"labels.text.stroke","stylers":[{"saturation":-64},{"hue":"#ff9100"},{"lightness":16},{"gamma":0.47},{"weight":2.7}]}];
 var darkStyle=[{"featureType":"all","elementType":"labels.text.fill","stylers":[{"saturation":36},{"color":"#b39964"},{"lightness":40}]},{"featureType":"all","elementType":"labels.text.stroke","stylers":[{"visibility":"on"},{"color":"#000000"},{"lightness":16}]},{"featureType":"all","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"administrative","elementType":"geometry.fill","stylers":[{"color":"#000000"},{"lightness":20}]},{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#000000"},{"lightness":17},{"weight":1.2}]},{"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#000000"},{"lightness":20}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#000000"},{"lightness":21}]},{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#000000"},{"lightness":17}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#000000"},{"lightness":29},{"weight":0.2}]},{"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#000000"},{"lightness":18}]},{"featureType":"road.local","elementType":"geometry","stylers":[{"color":"#181818"},{"lightness":16}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#000000"},{"lightness":19}]},{"featureType":"water","elementType":"geometry","stylers":[{"lightness":17},{"color":"#525252"}]}];
@@ -59,8 +60,6 @@ var pGoStyle=[{"featureType":"landscape.man_made","elementType":"geometry.fill",
 var selectedStyle = 'light';
 
 function initMap() {
-
-
     map = new google.maps.Map(document.getElementById('map'), {
         center: {
             lat: center_lat,
@@ -68,8 +67,8 @@ function initMap() {
         },
         zoom: 16,
         streetViewControl: false,
-		mapTypeControl: true,
-		mapTypeControlOptions: {
+        mapTypeControl: true,
+        mapTypeControlOptions: {
           style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
           position: google.maps.ControlPosition.RIGHT_TOP,
           mapTypeIds: [
@@ -78,17 +77,17 @@ function initMap() {
               'dark_style',
               'style_light2',
               'style_pgo']
-        },
+        }
     });
 
-	var style_dark = new google.maps.StyledMapType(darkStyle, {name: "Dark"});
-	map.mapTypes.set('dark_style', style_dark);
+    var style_dark = new google.maps.StyledMapType(darkStyle, {name: "Dark"});
+    map.mapTypes.set('dark_style', style_dark);
 
-	var style_light2 = new google.maps.StyledMapType(light2Style, {name: "Light2"});
-	map.mapTypes.set('style_light2', style_light2);
+    var style_light2 = new google.maps.StyledMapType(light2Style, {name: "Light2"});
+    map.mapTypes.set('style_light2', style_light2);
 
-	var style_pgo = new google.maps.StyledMapType(pGoStyle, {name: "PokemonGo"});
-	map.mapTypes.set('style_pgo', style_pgo);
+    var style_pgo = new google.maps.StyledMapType(pGoStyle, {name: "PokemonGo"});
+    map.mapTypes.set('style_pgo', style_pgo);
 
     map.addListener('maptypeid_changed', function(s) {
         localStorage['map_style'] = this.mapTypeId;
@@ -100,22 +99,62 @@ function initMap() {
 
     map.setMapTypeId(localStorage['map_style']);
 
-    marker = new google.maps.Marker({
+    centerMarker = new google.maps.Marker({
         position: {
             lat: center_lat,
             lng: center_lng
         },
+        draggable:true,
         map: map,
         animation: google.maps.Animation.DROP
     });
 
+    google.maps.event.addListener(centerMarker, 'dragend', function () {
+        var position = centerMarker.getPosition().toJSON();
+        nextLocation({
+            'lat': position.lat,
+            'lon': position.lng
+        });
+    });
+
     initSidebar();
-};
+}
+
+function nextLocation(position) {
+    return $.ajax({
+        url: "next_loc",
+        type: 'POST',
+        data: position
+    }).done(function(result) {
+        position = {lat: position.lat, lng: position.lon};
+        centerMarker.setPosition(position);
+        map.setCenter(position);
+
+        updateMap();
+    });
+}
 
 function initSidebar() {
     $('#gyms-switch').prop('checked', localStorage.showGyms === 'true');
     $('#pokemon-switch').prop('checked', localStorage.showPokemon === 'true');
     $('#pokestops-switch').prop('checked', localStorage.showPokestops === 'true');
+
+    $('#change-location').click(function () {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                if (position.coords.latitude && position.coords.longitude) {
+                    center_lat = position.coords.latitude;
+                    center_lng = position.coords.longitude;
+                    nextLocation({
+                        'lat': center_lat,
+                        'lon': center_lng
+                    });
+                }
+            });
+        } else {
+            alert('Not supported');
+        }
+    });
 }
 
 
@@ -191,7 +230,7 @@ function setupPokemonMarker(item) {
 
     addListeners(marker);
     return marker;
-};
+}
 
 function setupGymMarker(item) {
     var marker = new google.maps.Marker({
@@ -209,7 +248,7 @@ function setupGymMarker(item) {
 
     addListeners(marker);
     return marker;
-};
+}
 
 function setupPokestopMarker(item) {
     var imagename = item.lure_expiration ? "PstopLured" : "Pstop";
@@ -228,7 +267,7 @@ function setupPokestopMarker(item) {
 
     addListeners(marker);
     return marker;
-};
+}
 
 function addListeners(marker) {
     marker.addListener('click', function() {
@@ -252,7 +291,7 @@ function addListeners(marker) {
         }
     });
     return marker
-};
+}
 
 function clearStaleMarkers() {
     $.each(map_pokemons, function(key, value) {
@@ -263,7 +302,7 @@ function clearStaleMarkers() {
             delete map_pokemons[key];
         }
     });
-};
+}
 
 function updateMap() {
     
@@ -332,7 +371,7 @@ function updateMap() {
 
         clearStaleMarkers();
     });
-};
+}
 
 window.setInterval(updateMap, 5000);
 updateMap();
@@ -347,7 +386,7 @@ document.getElementById('gyms-switch').onclick = function() {
         });
         map_gyms = {}
     }
-};
+}
 
 $('#pokemon-switch').change(function() {
     localStorage["showPokemon"] = this.checked;
