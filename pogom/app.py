@@ -38,12 +38,17 @@ class Pogom(Flask):
         return jsonify(d)
 
     def next_loc(self):
-        lat = request.args.get('lat', type=float)
-        lon = request.args.get('lon', type=float)
-        if not (lat and lon):
+        lat = request.values.get('lat', type=float)
+        lon = request.values.get('lon', type=float)
+        location = request.values.get('location', type=str)
+        if not ((lat and lon) or location):
             print('[-] Invalid next location: %s,%s' % (lat, lon))
             return 'bad parameters', 400
         else:
+            if location:
+                position = get_pos_by_name(location)
+                lat = position[0]
+                lon = position[1]
             config['ORIGINAL_LATITUDE'] = lat
             config['ORIGINAL_LONGITUDE'] = lon
             return 'ok'

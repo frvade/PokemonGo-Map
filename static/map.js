@@ -77,8 +77,26 @@ function initMap() {
             lat: center_lat,
             lng: center_lng
         },
+        draggable:true,
         map: map,
         animation: google.maps.Animation.DROP
+    });
+
+    google.maps.event.addListener(marker, 'dragend', function()
+    {
+        var position = marker.getPosition().toJSON();
+
+        $.ajax({
+            url: "next_loc",
+            type: 'POST',
+            data: {
+                'lat': position.lat,
+                'lon': position.lng
+            },
+            dataType: "json"
+        }).done(function(result) {
+            updateMap();
+        });
     });
 
     initSidebar();
